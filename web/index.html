@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Live Digit Recognizer</title>
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="workspace" aria-label="Digit drawing workspace">
+        <div class="draw-panel">
+          <div class="topbar">
+            <h1>Live Digit Recognizer</h1>
+            <div class="actions">
+              <button id="clearButton" type="button" title="Clear drawing" aria-label="Clear drawing">Clear</button>
+              <button id="predictButton" type="button" title="Predict digit" aria-label="Predict digit">Predict</button>
+            </div>
+          </div>
+          <canvas id="digitCanvas" width="280" height="280" aria-label="Draw a digit"></canvas>
+        </div>
+
+        <aside class="result-panel" aria-label="Prediction result">
+          <div class="prediction">
+            <span class="label">Prediction</span>
+            <span id="predictionValue" class="digit">-</span>
+            <span id="confidenceValue" class="confidence">0.00%</span>
+          </div>
+          <div class="probabilities" id="probabilities"></div>
+          <div id="status" class="status">Ready</div>
+        </aside>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
+
