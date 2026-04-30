@@ -6,18 +6,58 @@ const predictionValue = document.getElementById("predictionValue");
 const confidenceValue = document.getElementById("confidenceValue");
 const probabilities = document.getElementById("probabilities");
 const statusValue = document.getElementById("status");
+const sizeOptions = document.querySelectorAll(".size-option");
+const brushOptions = document.querySelectorAll(".brush-option");
+const swatches = document.querySelectorAll(".swatch");
 
 let drawing = false;
 let lastPoint = null;
 let predictTimer = null;
+let inkColor = localStorage.getItem("digitInkColor") || "#000000";
+let brushWidth = Number(localStorage.getItem("digitBrushWidth") || 26);
+
+const brushWidths = {
+  small: 12,
+  medium: 26,
+  large: 42,
+};
 
 function resetCanvas() {
   context.fillStyle = "#ffffff";
   context.fillRect(0, 0, canvas.width, canvas.height);
   context.lineCap = "round";
   context.lineJoin = "round";
-  context.strokeStyle = "#000000";
-  context.lineWidth = 26;
+  context.strokeStyle = inkColor;
+  context.lineWidth = brushWidth;
+}
+
+function setFontSize(size) {
+  document.documentElement.dataset.fontSize = size;
+  localStorage.setItem("digitFontSize", size);
+  for (const option of sizeOptions) {
+    option.setAttribute("aria-pressed", String(option.dataset.size === size));
+  }
+}
+
+function setInkColor(color) {
+  inkColor = color;
+  context.strokeStyle = inkColor;
+  localStorage.setItem("digitInkColor", color);
+  for (const swatch of swatches) {
+    const selected = swatch.dataset.color === color;
+    swatch.classList.toggle("is-selected", selected);
+    swatch.setAttribute("aria-pressed", String(selected));
+  }
+}
+
+function setBrushSize(size) {
+  brushWidth = brushWidths[size] || brushWidths.medium;
+  context.lineWidth = brushWidth;
+  localStorage.setItem("digitBrushSize", size);
+  localStorage.setItem("digitBrushWidth", String(brushWidth));
+  for (const option of brushOptions) {
+    option.setAttribute("aria-pressed", String(option.dataset.brush === size));
+  }
 }
 
 function pointFromEvent(event) {
@@ -132,4 +172,25 @@ clearButton.addEventListener("click", () => {
 
 predictButton.addEventListener("click", predictDigit);
 
+for (const option of sizeOptions) {
+  option.addEventListener("click", () => {
+    setFontSize(option.dataset.size || "medium");
+  });
+}
+
+for (const swatch of swatches) {
+  swatch.addEventListener("click", () => {
+    setInkColor(swatch.dataset.color || "#000000");
+  });
+}
+
+for (const option of brushOptions) {
+  option.addEventListener("click", () => {
+    setBrushSize(option.dataset.brush || "medium");
+  });
+}
+
+setFontSize(localStorage.getItem("digitFontSize") || "medium");
+setBrushSize(localStorage.getItem("digitBrushSize") || "medium");
+setInkColor(inkColor);
 resetCanvas();

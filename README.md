@@ -63,7 +63,9 @@ http://127.0.0.1:8000
 ```
 
 Draw a digit on the canvas. The app predicts automatically while you draw, and
-you can also click `Predict`.
+you can also click `Predict`. Use the `S / M / L` font controls to resize the
+interface text, the `S / M / L` brush controls to change drawing thickness, and
+the ink swatches to draw in different dark colours.
 
 ## Test The Project
 

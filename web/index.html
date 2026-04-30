@@ -13,11 +13,41 @@
           <div class="topbar">
             <h1>Live Digit Recognizer</h1>
             <div class="actions">
-              <button id="clearButton" type="button" title="Clear drawing" aria-label="Clear drawing">Clear</button>
-              <button id="predictButton" type="button" title="Predict digit" aria-label="Predict digit">Predict</button>
+              <button id="clearButton" class="action-button secondary" type="button" title="Clear drawing" aria-label="Clear drawing">Clear</button>
+              <button id="predictButton" class="action-button primary" type="button" title="Predict digit" aria-label="Predict digit">Predict</button>
             </div>
           </div>
-          <canvas id="digitCanvas" width="280" height="280" aria-label="Draw a digit"></canvas>
+          <div class="controls" aria-label="Display and drawing controls">
+            <div class="control-group" aria-label="Font size">
+              <span class="control-label">Font</span>
+              <div class="segmented" role="group" aria-label="Font size">
+                <button class="size-option" type="button" data-size="small" aria-pressed="false" title="Small font">S</button>
+                <button class="size-option" type="button" data-size="medium" aria-pressed="true" title="Medium font">M</button>
+                <button class="size-option" type="button" data-size="large" aria-pressed="false" title="Large font">L</button>
+              </div>
+            </div>
+            <div class="control-group" aria-label="Brush size">
+              <span class="control-label">Brush</span>
+              <div class="segmented" role="group" aria-label="Brush size">
+                <button class="brush-option" type="button" data-brush="small" aria-pressed="false" title="Small brush">S</button>
+                <button class="brush-option" type="button" data-brush="medium" aria-pressed="true" title="Medium brush">M</button>
+                <button class="brush-option" type="button" data-brush="large" aria-pressed="false" title="Large brush">L</button>
+              </div>
+            </div>
+            <div class="control-group ink-control" aria-label="Ink colour">
+              <span class="control-label">Ink</span>
+              <div class="swatches" role="group" aria-label="Ink colour">
+                <button class="swatch is-selected" type="button" data-color="#000000" style="--swatch: #000000" aria-pressed="true" title="Black ink"></button>
+                <button class="swatch" type="button" data-color="#124f91" style="--swatch: #124f91" aria-pressed="false" title="Blue ink"></button>
+                <button class="swatch" type="button" data-color="#8f1f2f" style="--swatch: #8f1f2f" aria-pressed="false" title="Red ink"></button>
+                <button class="swatch" type="button" data-color="#11613d" style="--swatch: #11613d" aria-pressed="false" title="Green ink"></button>
+                <button class="swatch" type="button" data-color="#4f2f8f" style="--swatch: #4f2f8f" aria-pressed="false" title="Purple ink"></button>
+              </div>
+            </div>
+          </div>
+          <div class="canvas-area">
+            <canvas id="digitCanvas" width="280" height="280" aria-label="Draw a digit"></canvas>
+          </div>
         </div>
 
         <aside class="result-panel" aria-label="Prediction result">
@@ -34,4 +64,3 @@
     <script src="/app.js"></script>
   </body>
 </html>
-
