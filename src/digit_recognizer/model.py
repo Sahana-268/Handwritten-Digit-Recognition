@@ -5,7 +5,7 @@ from torch import nn
 
 
 class DigitCNN(nn.Module):
-    """A compact CNN that reaches high accuracy on MNIST."""
+    """A compact CNN for 28x28 handwritten character images."""
 
     def __init__(self, num_classes: int = 10) -> None:
         super().__init__()
@@ -54,4 +54,3 @@ class DigitCNN(nn.Module):
             elif isinstance(module, nn.Linear):
                 nn.init.normal_(module.weight, mean=0.0, std=0.01)
                 nn.init.zeros_(module.bias)
-

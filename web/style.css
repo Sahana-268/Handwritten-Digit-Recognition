@@ -104,6 +104,10 @@ h1 {
   gap: 10px;
 }
 
+.file-input {
+  display: none;
+}
+
 .action-button {
   min-width: 104px;
   height: 42px;
@@ -171,9 +175,9 @@ h1 {
 
 .size-option,
 .brush-option {
-  width: 32px;
   min-width: 32px;
   height: 30px;
+  padding: 0 9px;
   background: transparent;
   color: #344054;
   font-size: calc(13px * var(--app-font-scale));
@@ -367,6 +371,7 @@ h1 {
 
   .actions {
     width: 100%;
+    flex-wrap: wrap;
   }
 
   .action-button {

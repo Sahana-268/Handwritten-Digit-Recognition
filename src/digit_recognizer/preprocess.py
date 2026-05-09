@@ -55,6 +55,48 @@ def preprocess_digit_pil(
     return tensor
 
 
+def extract_character_images(
+    image: Image.Image,
+    auto_invert: bool = True,
+    min_component_area: int = 20,
+    gap_padding: int = 6,
+) -> list[Image.Image]:
+    """Split a drawing or uploaded image into left-to-right character crops."""
+
+    gray = image.convert("L")
+    array = np.asarray(gray, dtype=np.float32) / 255.0
+    if auto_invert and _background_is_light(array):
+        array = 1.0 - array
+
+    mask = array > 0.10
+    if not np.any(mask):
+        return []
+
+    rows = np.where(mask.any(axis=1))[0]
+    cols = np.where(mask.any(axis=0))[0]
+    top, bottom = rows[0], rows[-1]
+    left, right = cols[0], cols[-1]
+    mask = mask[top : bottom + 1, left : right + 1]
+    source = array[top : bottom + 1, left : right + 1]
+
+    boxes = _connected_component_boxes(mask, min_component_area)
+    if not boxes:
+        boxes = _projection_boxes(mask)
+
+    crops: list[Image.Image] = []
+    height, width = source.shape
+    for box_left, box_top, box_right, box_bottom in boxes:
+        padded_left = max(0, box_left - gap_padding)
+        padded_top = max(0, box_top - gap_padding)
+        padded_right = min(width - 1, box_right + gap_padding)
+        padded_bottom = min(height - 1, box_bottom + gap_padding)
+        crop = source[padded_top : padded_bottom + 1, padded_left : padded_right + 1]
+        crop_image = Image.fromarray(np.uint8(np.clip(crop, 0.0, 1.0) * 255), mode="L")
+        crops.append(crop_image)
+
+    return crops
+
+
 def save_preprocessed_preview(tensor: torch.Tensor, output_path: str | Path) -> None:
     array = tensor.detach().cpu().squeeze().numpy()
     array = (array * MNIST_STD) + MNIST_MEAN
@@ -95,3 +137,84 @@ def _crop_foreground(array: np.ndarray, threshold: float = 0.10) -> np.ndarray:
     x = (side - width) // 2
     padded[y : y + height, x : x + width] = cropped
     return padded
+
+
+def _connected_component_boxes(mask: np.ndarray, min_area: int) -> list[tuple[int, int, int, int]]:
+    height, width = mask.shape
+    visited = np.zeros_like(mask, dtype=bool)
+    boxes: list[tuple[int, int, int, int]] = []
+
+    for start_y, start_x in zip(*np.where(mask & ~visited)):
+        if visited[start_y, start_x]:
+            continue
+
+        stack = [(int(start_x), int(start_y))]
+        visited[start_y, start_x] = True
+        min_x = max_x = int(start_x)
+        min_y = max_y = int(start_y)
+        area = 0
+
+        while stack:
+            x, y = stack.pop()
+            area += 1
+            min_x = min(min_x, x)
+            max_x = max(max_x, x)
+            min_y = min(min_y, y)
+            max_y = max(max_y, y)
+
+            for next_x in range(max(0, x - 1), min(width, x + 2)):
+                for next_y in range(max(0, y - 1), min(height, y + 2)):
+                    if visited[next_y, next_x] or not mask[next_y, next_x]:
+                        continue
+                    visited[next_y, next_x] = True
+                    stack.append((next_x, next_y))
+
+        if area >= min_area:
+            boxes.append((min_x, min_y, max_x, max_y))
+
+    boxes.sort(key=lambda box: box[0])
+    return _merge_overlapping_boxes(boxes)
+
+
+def _projection_boxes(mask: np.ndarray) -> list[tuple[int, int, int, int]]:
+    columns = mask.any(axis=0)
+    boxes: list[tuple[int, int, int, int]] = []
+    start: int | None = None
+
+    for index, active in enumerate(columns):
+        if active and start is None:
+            start = index
+        elif not active and start is not None:
+            boxes.append(_box_for_column_range(mask, start, index - 1))
+            start = None
+
+    if start is not None:
+        boxes.append(_box_for_column_range(mask, start, len(columns) - 1))
+
+    return boxes
+
+
+def _box_for_column_range(mask: np.ndarray, left: int, right: int) -> tuple[int, int, int, int]:
+    submask = mask[:, left : right + 1]
+    rows = np.where(submask.any(axis=1))[0]
+    return (left, int(rows[0]), right, int(rows[-1]))
+
+
+def _merge_overlapping_boxes(boxes: list[tuple[int, int, int, int]]) -> list[tuple[int, int, int, int]]:
+    if not boxes:
+        return boxes
+
+    merged = [boxes[0]]
+    for left, top, right, bottom in boxes[1:]:
+        prev_left, prev_top, prev_right, prev_bottom = merged[-1]
+        horizontal_overlap = left <= prev_right + 2
+        if horizontal_overlap:
+            merged[-1] = (
+                min(prev_left, left),
+                min(prev_top, top),
+                max(prev_right, right),
+                max(prev_bottom, bottom),
+            )
+        else:
+            merged.append((left, top, right, bottom))
+    return merged

@@ -42,12 +42,13 @@ def save_json(payload: dict[str, Any], path: str | Path) -> None:
         file.write("\n")
 
 
-def save_confusion_matrix(matrix: np.ndarray, path: str | Path) -> None:
+def save_confusion_matrix(matrix: np.ndarray, path: str | Path, labels: list[str] | tuple[str, ...] | None = None) -> None:
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    header = ",".join(["actual\\predicted", *[str(i) for i in range(matrix.shape[1])]])
+    class_labels = list(labels) if labels is not None else [str(i) for i in range(matrix.shape[1])]
+    header = ",".join(["actual\\predicted", *class_labels])
     rows = [header]
-    for digit, row in enumerate(matrix):
-        rows.append(",".join([str(digit), *[str(int(value)) for value in row]]))
+    for label, row in zip(class_labels, matrix):
+        rows.append(",".join([label, *[str(int(value)) for value in row]]))
     output_path.write_text("\n".join(rows) + "\n", encoding="utf-8")
 

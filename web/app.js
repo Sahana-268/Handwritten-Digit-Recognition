@@ -2,6 +2,8 @@ const canvas = document.getElementById("digitCanvas");
 const context = canvas.getContext("2d");
 const clearButton = document.getElementById("clearButton");
 const predictButton = document.getElementById("predictButton");
+const uploadButton = document.getElementById("uploadButton");
+const imageInput = document.getElementById("imageInput");
 const predictionValue = document.getElementById("predictionValue");
 const confidenceValue = document.getElementById("confidenceValue");
 const probabilities = document.getElementById("probabilities");
@@ -98,14 +100,18 @@ async function predictDigit() {
       throw new Error(result.error || "Prediction failed");
     }
 
-    predictionValue.textContent = result.digit;
-    confidenceValue.textContent = `${(result.confidence * 100).toFixed(2)}%`;
-    renderProbabilities(result.top);
-    statusValue.textContent = "Ready";
+    renderDigitResult(result);
   } catch (error) {
     statusValue.textContent = error.message;
     statusValue.classList.add("error");
   }
+}
+
+function renderDigitResult(result) {
+  predictionValue.textContent = result.label ?? result.digit;
+  confidenceValue.textContent = `${(result.confidence * 100).toFixed(2)}%`;
+  renderProbabilities(result.top);
+  statusValue.textContent = "Ready";
 }
 
 function renderProbabilities(top) {
@@ -115,7 +121,7 @@ function renderProbabilities(top) {
     row.className = "probability-row";
 
     const digit = document.createElement("span");
-    digit.textContent = item.digit;
+    digit.textContent = item.label ?? item.digit;
 
     const track = document.createElement("div");
     track.className = "bar-track";
@@ -171,6 +177,28 @@ clearButton.addEventListener("click", () => {
 });
 
 predictButton.addEventListener("click", predictDigit);
+uploadButton.addEventListener("click", () => imageInput.click());
+
+imageInput.addEventListener("change", () => {
+  const file = imageInput.files && imageInput.files[0];
+  if (!file) {
+    return;
+  }
+
+  const image = new Image();
+  image.onload = () => {
+    resetCanvas();
+    const scale = Math.min(canvas.width / image.width, canvas.height / image.height);
+    const width = image.width * scale;
+    const height = image.height * scale;
+    const x = (canvas.width - width) / 2;
+    const y = (canvas.height - height) / 2;
+    context.drawImage(image, x, y, width, height);
+    schedulePrediction();
+    URL.revokeObjectURL(image.src);
+  };
+  image.src = URL.createObjectURL(file);
+});
 
 for (const option of sizeOptions) {
   option.addEventListener("click", () => {

@@ -35,7 +35,7 @@ validation split each epoch, and saves the best model to:
 artifacts/best_model.pt
 ```
 
-The included trained checkpoint reached `99.65%` test accuracy on MNIST. With
+The included trained checkpoint reached `99.64%` test accuracy on MNIST. With
 the default architecture and 8-10 epochs, fresh runs should typically reach
 about `99%+` test accuracy on a normal CPU/GPU setup.
 
@@ -62,7 +62,8 @@ Then open:
 http://127.0.0.1:8000
 ```
 
-Draw a digit on the canvas. The app predicts automatically while you draw, and
+Draw a digit from `0` to `9` on the canvas, or click `Upload` to predict from a
+handwritten digit image file. The app predicts automatically while you draw, and
 you can also click `Predict`. Use the `S / M / L` font controls to resize the
 interface text, the `S / M / L` brush controls to change drawing thickness, and
 the ink swatches to draw in different dark colours.

@@ -14,7 +14,7 @@ SRC_ROOT = PROJECT_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from digit_recognizer.data import MNIST_MEAN, MNIST_STD, create_data_loaders
+from digit_recognizer.data import MNIST_MEAN, MNIST_STD, create_data_loaders, labels_for_dataset
 from digit_recognizer.model import DigitCNN
 from digit_recognizer.utils import (
     accuracy_from_logits,
@@ -35,6 +35,12 @@ def serializable_args(args: argparse.Namespace) -> dict[str, object]:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train a CNN on MNIST digits.")
     parser.add_argument("--data-dir", type=Path, default=Path("data"), help="MNIST data directory.")
+    parser.add_argument(
+        "--dataset",
+        choices=["mnist", "emnist-letters", "emnist-balanced"],
+        default="mnist",
+        help="Dataset to train on. Use emnist-balanced for digits plus letters.",
+    )
     parser.add_argument("--output-dir", type=Path, default=Path("artifacts"), help="Model output directory.")
     parser.add_argument("--epochs", type=int, default=10, help="Number of training epochs.")
     parser.add_argument("--batch-size", type=int, default=128, help="Training batch size.")
@@ -45,6 +51,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=42, help="Random seed.")
     parser.add_argument("--device", default="auto", help="auto, cpu, cuda, cuda:0, or mps.")
     parser.add_argument("--no-augment", action="store_true", help="Disable training augmentation.")
+    parser.add_argument("--no-download", action="store_true", help="Disable dataset download.")
     return parser.parse_args()
 
 
@@ -90,12 +97,13 @@ def evaluate(
     loader: torch.utils.data.DataLoader,
     criterion: nn.Module,
     device: torch.device,
+    num_classes: int,
 ) -> tuple[dict[str, float], np.ndarray]:
     model.eval()
     total_loss = 0.0
     total_correct = 0
     total_seen = 0
-    matrix = np.zeros((10, 10), dtype=np.int64)
+    matrix = np.zeros((num_classes, num_classes), dtype=np.int64)
 
     for images, labels in loader:
         images = images.to(device, non_blocking=True)
@@ -128,15 +136,18 @@ def main() -> None:
     print(f"Using device: {device}")
     train_loader, val_loader, test_loader = create_data_loaders(
         data_dir=args.data_dir,
+        dataset_name=args.dataset,
         batch_size=args.batch_size,
         val_split=args.val_split,
         num_workers=args.num_workers,
         augment=not args.no_augment,
+        download=not args.no_download,
         seed=args.seed,
         pin_memory=device.type == "cuda",
     )
 
-    model = DigitCNN().to(device)
+    class_labels = labels_for_dataset(args.dataset)
+    model = DigitCNN(num_classes=len(class_labels)).to(device)
     criterion = nn.CrossEntropyLoss(label_smoothing=0.05)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
@@ -154,7 +165,7 @@ def main() -> None:
 
     for epoch in range(1, args.epochs + 1):
         train_metrics = train_one_epoch(model, train_loader, criterion, optimizer, scheduler, device)
-        val_metrics, _ = evaluate(model, val_loader, criterion, device)
+        val_metrics, _ = evaluate(model, val_loader, criterion, device, len(class_labels))
 
         epoch_metrics = {
             "epoch": epoch,
@@ -180,6 +191,9 @@ def main() -> None:
                 {
                     "model_state_dict": best_state,
                     "model_name": "DigitCNN",
+                    "dataset": args.dataset,
+                    "class_labels": list(class_labels),
+                    "num_classes": len(class_labels),
                     "epoch": epoch,
                     "val_accuracy": best_val_accuracy,
                     "mnist_mean": MNIST_MEAN,
@@ -191,7 +205,7 @@ def main() -> None:
             print(f"Saved new best checkpoint to {checkpoint_path}")
 
     model.load_state_dict(best_state)
-    test_metrics, confusion_matrix = evaluate(model, test_loader, criterion, device)
+    test_metrics, confusion_matrix = evaluate(model, test_loader, criterion, device, len(class_labels))
 
     metrics_payload = {
         "best_validation_accuracy": best_val_accuracy,
@@ -200,7 +214,7 @@ def main() -> None:
         "history": history,
     }
     save_json(metrics_payload, args.output_dir / "metrics.json")
-    save_confusion_matrix(confusion_matrix, args.output_dir / "confusion_matrix.csv")
+    save_confusion_matrix(confusion_matrix, args.output_dir / "confusion_matrix.csv", class_labels)
 
     print(f"Best validation accuracy: {best_val_accuracy:.4f}")
     print(f"Test accuracy: {test_metrics['accuracy']:.4f}")

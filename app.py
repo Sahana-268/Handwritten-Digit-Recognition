@@ -19,6 +19,7 @@ STATIC_ROOT = PROJECT_ROOT / "web"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
+from digit_recognizer.data import DIGIT_LABELS
 from digit_recognizer.model import DigitCNN
 from digit_recognizer.preprocess import preprocess_digit_pil, save_preprocessed_preview
 
@@ -26,8 +27,9 @@ from digit_recognizer.preprocess import preprocess_digit_pil, save_preprocessed_
 class Predictor:
     def __init__(self, checkpoint_path: Path, device_name: str = "cpu") -> None:
         self.device = torch.device(device_name)
-        checkpoint = torch.load(checkpoint_path, map_location=self.device)
-        self.model = DigitCNN().to(self.device)
+        checkpoint = torch.load(checkpoint_path, map_location=self.device, weights_only=False)
+        self.class_labels = list(checkpoint.get("class_labels", DIGIT_LABELS))
+        self.model = DigitCNN(num_classes=len(self.class_labels)).to(self.device)
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.model.eval()
 
@@ -36,19 +38,26 @@ class Predictor:
         tensor = preprocess_digit_pil(image).to(self.device)
         logits = self.model(tensor)
         probabilities = torch.softmax(logits, dim=1).squeeze(0).cpu()
-        values, indices = torch.topk(probabilities, k=3)
+        values, indices = torch.topk(probabilities, k=min(3, len(self.class_labels)))
 
         preview_path = PROJECT_ROOT / "artifacts" / "latest_live_preprocessed.png"
         save_preprocessed_preview(tensor.cpu(), preview_path)
 
+        top = [
+            {
+                "label": self.class_labels[int(index.item())],
+                "index": int(index.item()),
+                "probability": float(value.item()),
+            }
+            for value, index in zip(values, indices)
+        ]
+
         return {
+            "label": top[0]["label"],
             "digit": int(indices[0].item()),
             "confidence": float(values[0].item()),
             "probabilities": [float(value) for value in probabilities.tolist()],
-            "top": [
-                {"digit": int(index.item()), "probability": float(value.item())}
-                for value, index in zip(values, indices)
-            ],
+            "top": top,
         }
 
 
