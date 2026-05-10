@@ -28,7 +28,7 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-## 🏋️ Training the Model
+##  Training the Model
 
 Train the CNN with custom parameters:
 
