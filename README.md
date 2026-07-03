@@ -45,7 +45,7 @@ python train.py --epochs 10 --batch-size 128 --lr 0.001
 **Expected Results:**
 - Fresh runs typically achieve 99%+ test accuracy on standard CPU/GPU
 
-## 🔮 Make Predictions
+## Make Predictions
 
 Predict digits from custom images:
 
